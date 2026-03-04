@@ -2,17 +2,17 @@
 Credit Score Router for the Credit Score API.
 Handles credit score calculation, retrieval, and history endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
-from uuid import UUID
 from datetime import date, datetime
 from typing import Optional
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.credit_score import CreditScoreResponse, CreditScoreHistoryResponse, CreditScoreHistoryItem
 from app.schemas.error import ErrorResponse
 from app.services.credit_score_service import CreditScoreService
 from app.services.score_calculator import CreditScoreCalculator
-from app.services.factor_data_aggregator import FactorDataAggregator
+from app.services.data_source_factory import DataSourceFactory
 from app.repositories.credit_score_repository import CreditScoreRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.repayment_repository import RepaymentRepository
@@ -28,7 +28,7 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
     Dependency injection for CreditScoreService.
     
     Creates and wires all dependencies needed for credit score operations:
-    - Factor Data Aggregator (with all repository dependencies)
+    - Factor Data Aggregator (or CSV loader based on configuration)
     - Credit Score Calculator
     - Credit Score Repository
     
@@ -38,15 +38,18 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
     Returns:
         CreditScoreService: Fully configured credit score service
     """
-    # Initialize repositories
+    # Initialize data source factory
+    factory = DataSourceFactory()
+    
+    # Initialize repositories for database mode
     repayment_repo = RepaymentRepository(db)
     mpesa_repo = MpesaTransactionRepository(db)
     payment_repo = PaymentRepository(db)
     fine_repo = FineRepository(db)
     credit_score_repo = CreditScoreRepository(db)
     
-    # Initialize factor data aggregator with repository dependencies
-    factor_aggregator = FactorDataAggregator(
+    # Initialize factor data aggregator using factory
+    factor_aggregator = factory.create_factor_data_aggregator(
         repayment_repository=repayment_repo,
         mpesa_transaction_repository=mpesa_repo,
         payment_repository=payment_repo,
@@ -75,7 +78,7 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
     tags=["credit-scores"]
 )
 def calculate_credit_score(
-    user_id: UUID,
+    user_id: str,
     db: Session = Depends(get_db),
     credit_score_service: CreditScoreService = Depends(get_credit_score_service)
 ):
@@ -85,7 +88,7 @@ def calculate_credit_score(
     Calculates a new credit score based on all financial factors and stores it.
     
     Args:
-        user_id: UUID of the user
+        user_id: UUID string of the user
         db: Database session (injected)
         credit_score_service: Credit score service (injected)
         
@@ -95,22 +98,64 @@ def calculate_credit_score(
     Validates: Requirements 7.1
     """
     try:
-        # Verify user exists
-        user_repo = UserRepository(db)
-        user = user_repo.get_by_id(user_id)
-        if not user:
+        # Parse and validate UUID
+        print(f"Received user_id: '{user_id}'")  # Debug logging
+        print(f"User_id type: {type(user_id)}")  # Debug logging
+        print(f"User_id length: {len(user_id) if user_id else 'None'}")  # Debug logging
+        print(f"User_id repr: {repr(user_id)}")  # Debug logging
+        
+        # Check for common issues
+        if not user_id:
+            raise ValueError("User ID is empty")
+        
+        # Remove any potential whitespace or special characters
+        clean_user_id = str(user_id).strip()
+        print(f"Clean user_id: '{clean_user_id}'")  # Debug logging
+        
+        try:
+            user_uuid = UUID(clean_user_id)
+            print(f"Successfully parsed UUID: {user_uuid}")  # Debug logging
+        except ValueError as e:
+            print(f"UUID parsing error: {e}")  # Debug logging
+            print(f"Error details - user_id: {repr(clean_user_id)}")  # Debug logging
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error_code": "VALIDATION_ERROR",
+                    "message": "Invalid request data",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "details": {
+                        "user_id": f"Invalid UUID format received: '{clean_user_id}'. Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                        "received": clean_user_id,
+                        "error": str(e)
+                    }
+                }
+            )
+        
+        # Verify user exists using factory
+        factory = DataSourceFactory()
+        user_data_source = factory.create_user_repository(db)
+        
+        if factory.is_csv_mode():
+            user_data = user_data_source.get_user_by_id(user_uuid)
+            user_exists = user_data is not None
+        else:
+            user = user_data_source.get_by_id(user_uuid)
+            user_exists = user is not None
+        
+        if not user_exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "error_code": "USER_NOT_FOUND",
-                    "message": f"User with ID {user_id} does not exist",
+                    "message": f"User with ID {user_uuid} does not exist",
                     "timestamp": datetime.utcnow().isoformat(),
-                    "details": {"user_id": str(user_id)}
+                    "details": {"user_id": str(user_uuid)}
                 }
             )
         
         # Calculate and store the credit score using the service
-        credit_score = credit_score_service.calculate_and_store_score(user_id)
+        credit_score = credit_score_service.calculate_and_store_score(user_uuid)
         
         # Build factors dictionary
         factors = {
@@ -120,10 +165,23 @@ def calculate_credit_score(
             "fine_factor": credit_score.fine_factor
         }
         
+        # Determine score category
+        if credit_score.score >= 750:
+            category = "Excellent"
+        elif credit_score.score >= 700:
+            category = "Good"
+        elif credit_score.score >= 650:
+            category = "Fair"
+        elif credit_score.score >= 600:
+            category = "Poor"
+        else:
+            category = "Very Poor"
+        
         return CreditScoreResponse(
+            id=credit_score.id,
             user_id=credit_score.user_id,
             score=credit_score.score,
-            category=credit_score.category,
+            category=category,
             calculated_at=credit_score.calculated_at,
             factors=factors
         )
@@ -131,12 +189,12 @@ def calculate_credit_score(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        print(f"Unexpected error in calculate_credit_score: {e}")  # Debug logging
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
-                "error_code": "INTERNAL_SERVER_ERROR",
-                "message": "An error occurred while calculating the credit score",
+                "error_code": "CALCULATION_ERROR",
+                "message": "Failed to calculate credit score",
                 "timestamp": datetime.utcnow().isoformat(),
                 "details": {"error": str(e)}
             }
@@ -173,10 +231,18 @@ def get_current_credit_score(
     Validates: Requirements 7.1, 7.2, 7.3, 7.4
     """
     try:
-        # Verify user exists
-        user_repo = UserRepository(db)
-        user = user_repo.get_by_id(user_id)
-        if not user:
+        # Verify user exists using factory
+        factory = DataSourceFactory()
+        user_data_source = factory.create_user_repository(db)
+        
+        if factory.is_csv_mode():
+            user_data = user_data_source.get_user_by_id(user_id)
+            user_exists = user_data is not None
+        else:
+            user = user_data_source.get_by_id(user_id)
+            user_exists = user is not None
+        
+        if not user_exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
@@ -266,10 +332,18 @@ def get_credit_score_history(
     Validates: Requirements 7.5
     """
     try:
-        # Verify user exists
-        user_repo = UserRepository(db)
-        user = user_repo.get_by_id(user_id)
-        if not user:
+        # Verify user exists using factory
+        factory = DataSourceFactory()
+        user_data_source = factory.create_user_repository(db)
+        
+        if factory.is_csv_mode():
+            user_data = user_data_source.get_user_by_id(user_id)
+            user_exists = user_data is not None
+        else:
+            user = user_data_source.get_by_id(user_id)
+            user_exists = user is not None
+        
+        if not user_exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={

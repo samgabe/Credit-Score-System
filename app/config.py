@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 3600
     
+    # Data Source Configuration
+    data_source: str = "database"  # Options: "database" or "csv"
+    csv_directory: str = "csv_data"  # Directory containing CSV files when using CSV data source
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

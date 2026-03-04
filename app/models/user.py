@@ -20,6 +20,7 @@ class User(Base):
         national_id: User's unique national identification number
         phone_number: User's phone number
         email: User's email address (optional for backward compatibility)
+        password_hash: Hashed password for authentication
         created_at: Timestamp when user was created
         updated_at: Timestamp when user was last updated
     """
@@ -30,6 +31,7 @@ class User(Base):
     national_id = Column(Integer, unique=True, nullable=False, index=True)
     phone_number = Column(String(20), nullable=False)
     email = Column(String(255), nullable=True, index=True)
+    password_hash = Column(String(255), nullable=True)  # New field for authentication
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     

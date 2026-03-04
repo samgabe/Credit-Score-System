@@ -85,15 +85,15 @@ async def health_check():
 
 
 # Import routers
+from app.api.routers.auth_router import router as auth_router
 from app.api.routers.user_router import router as user_router
-from app.api.routers.repayment_router import router as repayment_router
-from app.api.routers.mpesa_router import router as mpesa_router
-from app.api.routers.fine_router import router as fine_router
 from app.api.routers.credit_score_router import router as credit_score_router
+from app.api.routers.analytics_router import router as analytics_router
+from app.api.routers.csv_upload_router import router as csv_upload_router
 
 # Register all routers with /api/v1 prefix
+app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
 app.include_router(user_router, prefix="/api/v1", tags=["users"])
-app.include_router(repayment_router, prefix="/api/v1", tags=["repayments"])
-app.include_router(mpesa_router, prefix="/api/v1", tags=["mpesa"])
-app.include_router(fine_router, prefix="/api/v1", tags=["fines"])
 app.include_router(credit_score_router, prefix="/api/v1", tags=["credit-scores"])
+app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
+app.include_router(csv_upload_router, prefix="/api/v1", tags=["csv-upload"])

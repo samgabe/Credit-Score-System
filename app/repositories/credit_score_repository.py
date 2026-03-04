@@ -114,3 +114,33 @@ class CreditScoreRepository:
             query = query.filter(CreditScore.calculated_at <= end_datetime)
         
         return query.order_by(desc(CreditScore.calculated_at)).all()
+    
+    def get_scores_by_date_range(self, start_date: datetime, end_date: datetime) -> List[CreditScore]:
+        """
+        Retrieve credit scores created within a specific date range.
+        
+        Args:
+            start_date: Start datetime for filtering (inclusive)
+            end_date: End datetime for filtering (inclusive)
+            
+        Returns:
+            List[CreditScore]: List of credit scores within the date range
+        """
+        return self.db.query(CreditScore).filter(
+            CreditScore.calculated_at >= start_date,
+            CreditScore.calculated_at <= end_date
+        ).order_by(desc(CreditScore.calculated_at)).all()
+    
+    def get_recent_scores(self, limit: int = 10) -> List[CreditScore]:
+        """
+        Retrieve the most recent credit scores.
+        
+        Args:
+            limit: Maximum number of scores to return
+            
+        Returns:
+            List[CreditScore]: List of recent credit scores
+        """
+        return self.db.query(CreditScore).order_by(
+            desc(CreditScore.calculated_at)
+        ).limit(limit).all()

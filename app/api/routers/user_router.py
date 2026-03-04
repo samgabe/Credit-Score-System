@@ -5,13 +5,57 @@ Handles user management endpoints including creation, retrieval, and updates.
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from datetime import datetime
 from app.database import get_db
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.schemas.error import ErrorResponse
 from app.repositories.user_repository import UserRepository
+from app.services.data_source_factory import DataSourceFactory
 from app.exceptions import UserNotFoundError, DuplicateNationalIDError, ValidationException
 
 router = APIRouter()
+
+
+@router.get(
+    "/users",
+    response_model=list[UserResponse],
+    responses={
+        500: {"model": ErrorResponse, "description": "Server error"}
+    },
+    tags=["users"]
+)
+def get_all_users(db: Session = Depends(get_db)):
+    """
+    Get all users.
+    
+    Retrieves a list of all users in the system with their basic information.
+    
+    Args:
+        db: Database session (injected)
+        
+    Returns:
+        list[UserResponse]: List of all users
+        
+    Raises:
+        DatabaseError: If database operation fails (500)
+        
+    Validates: Requirement 6.4 - User listing functionality
+    """
+    user_repo = UserRepository(db)
+    users = user_repo.get_all()
+    
+    return [
+        UserResponse(
+            id=user.id,
+            fullname=user.fullname,
+            national_id=user.national_id,
+            phone_number=user.phone_number,
+            email=user.email,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        for user in users
+    ]
 
 
 @router.post(
@@ -100,23 +144,43 @@ def get_user(
         
     Validates: Requirements 6.3
     """
-    user_repo = UserRepository(db)
+    # Use factory to get user data source
+    factory = DataSourceFactory()
+    user_data_source = factory.create_user_repository(db)
     
-    # Get user by ID
-    user = user_repo.get_by_id(user_id)
-    
-    if not user:
-        raise UserNotFoundError(str(user_id))
-    
-    return UserResponse(
-        id=user.id,
-        fullname=user.fullname,
-        national_id=user.national_id,
-        phone_number=user.phone_number,
-        email=user.email,
-        created_at=user.created_at,
-        updated_at=user.updated_at
-    )
+    if factory.is_csv_mode():
+        # Get user from CSV
+        user_data = user_data_source.get_user_by_id(user_id)
+        
+        if not user_data:
+            raise UserNotFoundError(str(user_id))
+        
+        # Convert CSV data to UserResponse format
+        return UserResponse(
+            id=UUID(user_data['id']),
+            fullname=user_data['fullname'],
+            national_id=int(user_data['national_id']),
+            phone_number=user_data['phone_number'],
+            email=user_data.get('email'),
+            created_at=datetime.fromisoformat(user_data['created_at']),
+            updated_at=datetime.fromisoformat(user_data['updated_at'])
+        )
+    else:
+        # Get user from database
+        user = user_data_source.get_by_id(user_id)
+        
+        if not user:
+            raise UserNotFoundError(str(user_id))
+        
+        return UserResponse(
+            id=user.id,
+            fullname=user.fullname,
+            national_id=user.national_id,
+            phone_number=user.phone_number,
+            email=user.email,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
 
 
 @router.put(

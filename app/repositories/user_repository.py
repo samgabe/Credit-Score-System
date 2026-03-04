@@ -25,38 +25,35 @@ class UserRepository:
         """
         self.db = db
     
-    def create(self, fullname: str, national_id: int, phone_number: str, email: Optional[str] = None) -> User:
+    def create(self, fullname: str, national_id: int, phone_number: str, email: Optional[str] = None, password_hash: Optional[str] = None) -> User:
         """
-        Create a new user in the database with enhanced profile fields.
+        Create a new user in the database.
         
         Args:
             fullname: User's full name
             national_id: User's unique national identification number
             phone_number: User's phone number
-            email: User's email address (optional for backward compatibility)
+            email: User's email address (optional)
+            password_hash: User's password hash (optional)
             
         Returns:
-            User: The created user object with generated UUID
+            User: Created user object
             
         Raises:
-            DuplicateNationalIDError: If a user with the same national_id already exists
+            IntegrityError: If national_id already exists
             
-        Validates: Requirements 6.1, 6.2
+        Validates: Requirements 6.1, 6.2, 6.3 - User creation
         """
-        # Check for duplicate national ID
-        existing_user = self.get_by_national_id(national_id)
-        if existing_user:
-            raise DuplicateNationalIDError(national_id)
-        
         user = User(
             fullname=fullname,
             national_id=national_id,
             phone_number=phone_number,
-            email=email
+            email=email,
+            password_hash=password_hash
         )
         
+        self.db.add(user)
         try:
-            self.db.add(user)
             self.db.commit()
             self.db.refresh(user)
             return user
@@ -67,7 +64,7 @@ class UserRepository:
                 raise DuplicateNationalIDError(national_id)
             raise
     
-    def update(self, user_id: UUID, fullname: Optional[str] = None, phone_number: Optional[str] = None) -> Optional[User]:
+    def update(self, user_id: UUID, fullname: Optional[str] = None, phone_number: Optional[str] = None, email: Optional[str] = None) -> Optional[User]:
         """
         Update a user's profile information.
         Note: national_id cannot be changed as per requirements.
@@ -94,6 +91,17 @@ class UserRepository:
         self.db.commit()
         self.db.refresh(user)
         return user
+    
+    def get_all(self) -> list[User]:
+        """
+        Retrieve all users from the database.
+        
+        Returns:
+            list[User]: List of all users in the database
+            
+        Validates: Requirement 6.4 - User listing functionality
+        """
+        return self.db.query(User).all()
     
     def get_by_id(self, user_id: UUID) -> Optional[User]:
         """
