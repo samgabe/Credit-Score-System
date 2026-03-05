@@ -65,3 +65,7 @@ requirements.txt
 
 
 * .pdf
+
+csv_data/
+
+uploads/
