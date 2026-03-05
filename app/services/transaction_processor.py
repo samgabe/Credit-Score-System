@@ -6,7 +6,6 @@ from uuid import UUID
 from datetime import date, datetime
 from sqlalchemy.orm import Session
 from app.models.repayment import RepaymentStatus
-from app.models.mpesa_transaction import TransactionType
 from app.models.fine import FineStatus
 from app.repositories.repayment_repository import RepaymentRepository
 from app.repositories.mpesa_transaction_repository import MpesaTransactionRepository
@@ -110,13 +109,10 @@ class TransactionProcessor:
         if transaction_type not in ['incoming', 'outgoing']:
             raise ValueError(f"Invalid transaction type: {transaction_type}. Must be 'incoming' or 'outgoing'.")
         
-        # Convert string to enum
-        trans_type_enum = TransactionType.incoming if transaction_type == 'incoming' else TransactionType.outgoing
-        
         # Create the M-Pesa transaction record
         transaction = self.mpesa_repo.create(
             user_id=user_id,
-            transaction_type=trans_type_enum,
+            transaction_type=transaction_type,
             amount=amount,
             reference=reference,
             transaction_date=transaction_date

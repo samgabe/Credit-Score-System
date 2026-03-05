@@ -37,7 +37,7 @@ class User(Base):
     
     # Relationships
     repayments = relationship("Repayment", back_populates="user", cascade="all, delete-orphan")
-    mpesa_transactions = relationship("MpesaTransaction", back_populates="user", cascade="all, delete-orphan")
+    # mpesa_transactions = relationship("MpesaTransaction", back_populates="user", cascade="all, delete-orphan")
     fines = relationship("Fine", back_populates="user", cascade="all, delete-orphan")
     credit_scores = relationship("CreditScore", back_populates="user", cascade="all, delete-orphan")
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")

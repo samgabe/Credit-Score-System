@@ -11,10 +11,15 @@ Requirements: 3.6, 3.7, 5.3, 5.4, 7.1, 7.2, 7.5
 from typing import Optional, List
 from uuid import UUID
 from datetime import date
+from sqlalchemy.orm import Session
 from app.services.factor_data_aggregator import FactorDataAggregator
 from app.services.score_calculator import CreditScoreCalculator
+from app.services.individual_factor_calculator import IndividualFactorCalculator
 from app.repositories.credit_score_repository import CreditScoreRepository
+from app.repositories.credit_subject_repository import CreditSubjectRepository
 from app.models.credit_score import CreditScore
+from app.models.credit_subject import CreditSubject
+from app.exceptions import CalculationError
 
 
 class CreditScoreService:
@@ -34,7 +39,9 @@ class CreditScoreService:
         self,
         factor_aggregator: FactorDataAggregator,
         calculator: CreditScoreCalculator,
-        credit_score_repository: CreditScoreRepository
+        credit_score_repository: CreditScoreRepository,
+        credit_subject_repository: CreditSubjectRepository,
+        db: Session = None
     ):
         """
         Initialize the CreditScoreService with dependencies.
@@ -43,10 +50,20 @@ class CreditScoreService:
             factor_aggregator: Service for retrieving factor data from existing systems
             calculator: Service for calculating credit scores from factor data
             credit_score_repository: Repository for credit score data persistence
+            credit_subject_repository: Repository for credit subject data persistence
+            db: Database session for individual factor calculation
         """
         self.factor_aggregator = factor_aggregator
         self.calculator = calculator
         self.credit_score_repository = credit_score_repository
+        self.credit_subject_repository = credit_subject_repository
+        self.db = db
+        
+        # Initialize individual factor calculator if database session is available
+        if db:
+            self.individual_calculator = IndividualFactorCalculator(db)
+        else:
+            self.individual_calculator = None
     
     def calculate_and_store_score(self, user_id: UUID) -> CreditScore:
         """
@@ -144,3 +161,110 @@ class CreditScoreService:
             start_date=start_date,
             end_date=end_date
         )
+    
+    def calculate_credit_score_for_subject(self, subject_id: UUID) -> CreditScore:
+        """
+        Calculate credit score for a credit subject using individual client data.
+        
+        This method calculates a credit score for a credit subject using their
+        individual transaction data instead of aggregated data.
+        
+        Args:
+            subject_id: UUID of the credit subject
+            
+        Returns:
+            CreditScore: Calculated credit score with factors and category
+            
+        Raises:
+            ValueError: If subject not found or insufficient data
+            CalculationError: If score calculation fails
+            
+        Requirements: 7.1, 7.2
+        """
+        try:
+            # Use individual factor calculator if available
+            if self.individual_calculator:
+                # Calculate individual factors
+                individual_factors = self.individual_calculator.calculate_all_factors(subject_id)
+                
+                # Calculate credit score using individual factors
+                score_result = self.calculator.calculate_score(
+                    repayment_data={'factor': individual_factors['repayment_factor']},
+                    mpesa_data={'factor': individual_factors['mpesa_factor']},
+                    consistency_data={'factor': individual_factors['consistency_factor']},
+                    fine_data={'factor': individual_factors['fine_factor']}
+                )
+            else:
+                # Fallback to aggregated data (legacy approach)
+                factor_data = self.factor_aggregator.get_aggregated_data_for_subject(subject_id)
+                score_result = self.calculator.calculate_score(
+                    repayment_data=factor_data.repayment_data,
+                    mpesa_data=factor_data.mpesa_data,
+                    consistency_data=factor_data.consistency_data,
+                    fine_data=factor_data.fine_data
+                )
+            
+            # Create and save credit score
+            credit_score = self.credit_score_repository.create_for_subject(
+                subject_id=subject_id,
+                score=score_result.total_score,
+                category=score_result.category,
+                repayment_factor=score_result.repayment_factor,
+                mpesa_factor=score_result.mpesa_factor,
+                consistency_factor=score_result.consistency_factor,
+                fine_factor=score_result.fine_factor
+            )
+            
+            return credit_score
+            
+        except Exception as e:
+            raise CalculationError(
+                message=f"Failed to calculate credit score for subject {subject_id}",
+                details=str(e)
+            )
+    
+    def get_all_credit_scores_with_subjects(self) -> List[tuple[CreditScore, Optional[CreditSubject]]]:
+        """
+        Get all credit scores with their associated subject information.
+        
+        Returns:
+            List[tuple[CreditScore, Optional[CreditSubject]]: List of credit scores with subject info
+        """
+        try:
+            # Get all credit scores
+            credit_scores = self.credit_score_repository.get_all_scores()
+            
+            # Get subject information for each score
+            scores_with_subjects = []
+            for score in credit_scores:
+                subject = None
+                if score.credit_subject_id:
+                    subject = self.credit_subject_repo.get_by_id(score.credit_subject_id)
+                
+                scores_with_subjects.append((score, subject))
+            
+            return scores_with_subjects
+            
+        except Exception as e:
+            raise CalculationError(
+                message="Failed to retrieve credit scores with subjects",
+                details=str(e)
+            )
+    
+    def get_credit_scores_for_subject(self, subject_id: UUID) -> List[CreditScore]:
+        """
+        Get credit scores for a specific credit subject.
+        
+        Args:
+            subject_id: UUID of the credit subject
+            
+        Returns:
+            List[CreditScore]: List of credit scores for the subject
+        """
+        try:
+            return self.credit_score_repository.get_by_credit_subject_id(str(subject_id))
+        except Exception as e:
+            raise CalculationError(
+                message=f"Failed to retrieve credit scores for subject {subject_id}",
+                details=str(e)
+            )

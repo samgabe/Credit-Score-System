@@ -56,4 +56,18 @@ def init_db() -> None:
     Initialize the database by creating all tables.
     Should be called on application startup.
     """
+    # Import all models to ensure they're registered with Base
+    from app.models.user import User
+    from app.models.system_user import SystemUser
+    from app.models.credit_subject import CreditSubject
+    from app.models.credit_score import CreditScore, setup_credit_subject_relationship
+    from app.models.repayment import Repayment
+    from app.models.mpesa_transaction import MpesaTransaction
+    from app.models.payment import Payment
+    from app.models.fine import Fine
+    from app.models.factor_data import RepaymentData, MpesaData, ConsistencyData, FineData
+    
+    # Set up relationships that have circular dependencies
+    setup_credit_subject_relationship()
+    
     Base.metadata.create_all(bind=engine)

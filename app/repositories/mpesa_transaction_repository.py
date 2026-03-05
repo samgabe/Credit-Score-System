@@ -6,7 +6,7 @@ from typing import List
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.orm import Session
-from app.models.mpesa_transaction import MpesaTransaction, TransactionType
+from app.models.mpesa_transaction import MpesaTransaction
 
 
 class MpesaTransactionRepository:
@@ -27,7 +27,7 @@ class MpesaTransactionRepository:
     def create(
         self,
         user_id: UUID,
-        transaction_type: TransactionType,
+        transaction_type: str,
         amount: float,
         reference: str,
         transaction_date: datetime

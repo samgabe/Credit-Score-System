@@ -14,6 +14,7 @@ class CreditScoreResponse(BaseModel):
     category: str = Field(..., description="Score category (Poor, Fair, Good, Excellent)")
     calculated_at: datetime
     factors: Dict[str, float] = Field(..., description="Score calculation factors")
+    credit_subject: Optional[Dict[str, str]] = Field(None, description="Credit subject information")
     
     class Config:
         from_attributes = True

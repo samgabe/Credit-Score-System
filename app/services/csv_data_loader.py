@@ -23,7 +23,6 @@ from app.models.factor_data import (
 from app.models.repayment import RepaymentStatus
 from app.models.fine import FineStatus
 from app.models.payment import PaymentStatus
-from app.models.mpesa_transaction import TransactionType
 from app.models.payment import PaymentType
 
 

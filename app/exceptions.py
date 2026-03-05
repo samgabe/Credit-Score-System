@@ -50,6 +50,15 @@ class DuplicateNationalIDError(Exception):
         super().__init__(self.message)
 
 
+class DuplicateEmailError(Exception):
+    """Exception raised when attempting to create a user with a duplicate email."""
+    
+    def __init__(self, email: str):
+        self.email = email
+        self.message = f"A user with email {email} already exists"
+        super().__init__(self.message)
+
+
 class NoScoreAvailable(Exception):
     """Exception raised when no credit score is available for a user."""
     

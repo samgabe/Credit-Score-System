@@ -98,3 +98,19 @@ class FineRepository:
             self.db.commit()
             self.db.refresh(fine)
         return fine
+    
+    def get_by_credit_subject_id(self, credit_subject_id: str) -> List[Fine]:
+        """
+        Retrieve fines for a credit subject.
+        
+        Args:
+            credit_subject_id: ID of the credit subject
+            
+        Returns:
+            List[Fine]: List of fines for the credit subject
+        """
+        try:
+            uuid_id = UUID(credit_subject_id)
+            return self.db.query(Fine).filter(Fine.user_id == uuid_id).all()
+        except (ValueError, AttributeError):
+            return []

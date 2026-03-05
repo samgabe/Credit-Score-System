@@ -103,3 +103,19 @@ class RepaymentRepository:
             Repayment.payment_date >= start_date,
             Repayment.payment_date <= end_date
         ).all()
+    
+    def get_by_credit_subject_id(self, credit_subject_id: str) -> List[Repayment]:
+        """
+        Retrieve repayments for a credit subject.
+        
+        Args:
+            credit_subject_id: ID of the credit subject
+            
+        Returns:
+            List[Repayment]: List of repayments for the credit subject
+        """
+        try:
+            uuid_id = UUID(credit_subject_id)
+            return self.db.query(Repayment).filter(Repayment.user_id == uuid_id).all()
+        except (ValueError, AttributeError):
+            return []

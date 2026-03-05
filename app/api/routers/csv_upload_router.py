@@ -18,10 +18,13 @@ from app.config import get_settings
 from datetime import datetime
 from uuid import UUID
 from app.models.user import User
+from app.models.credit_subject import CreditSubject
 from app.models.repayment import Repayment, RepaymentStatus
-from app.models.mpesa_transaction import MpesaTransaction, TransactionType
+from app.models.mpesa_transaction import MpesaTransaction
 from app.models.payment import Payment, PaymentType, PaymentStatus
 from app.models.fine import Fine, FineStatus
+from app.api.routers.system_auth_router import get_current_system_user, require_role
+from app.models.system_user import SystemUser
 
 router = APIRouter(prefix="/csv-upload", tags=["csv-upload"])
 
@@ -128,6 +131,8 @@ def parse_and_validate_csv_content(file_type: str, content: bytes, csv_config: D
 @router.post(
     "/{file_type}",
     responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Insufficient permissions"},
         400: {"model": ErrorResponse, "description": "Invalid file or format"},
         422: {"model": ErrorResponse, "description": "Validation error"},
         500: {"model": ErrorResponse, "description": "Server error"}
@@ -137,7 +142,8 @@ async def upload_csv_file(
     file_type: str,
     file: UploadFile = File(...),
     sync_to_db: bool = Query(False, description="If true, also upsert uploaded rows into database tables"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: SystemUser = Depends(require_role("operator"))
 ):
     """
     Upload and process a CSV file for credit score data.
@@ -259,6 +265,8 @@ async def upload_csv_file(
 @router.post(
     "/sync-pack/{pack_name}",
     responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Insufficient permissions"},
         400: {"model": ErrorResponse, "description": "Invalid request"},
         422: {"model": ErrorResponse, "description": "Validation or constraint error"},
         500: {"model": ErrorResponse, "description": "Server error"}
@@ -267,7 +275,8 @@ async def upload_csv_file(
 async def sync_csv_pack(
     pack_name: str,
     sync_to_db: bool = Query(True, description="If true, upsert pack rows into DB as well"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: SystemUser = Depends(require_role("operator"))
 ):
     """
     Import all CSV files from a named pack directory under csv_data in safe dependency order:
@@ -524,9 +533,9 @@ def sync_csv_to_database(file_type: str, rows: List[Dict], db: Session) -> Dict[
                 updated += 1
 
             # CSV supports: deposit, withdrawal, transfer, payment.
-            # DB model supports: incoming/outgoing.
+            # Map to string values since we removed the enum
             tx_type = (row.get("transaction_type") or "").lower()
-            mapped_type = TransactionType.incoming if tx_type == "deposit" else TransactionType.outgoing
+            mapped_type = "incoming" if tx_type == "deposit" else "outgoing"
 
             model.user_id = _parse_uuid(row.get("user_id")) or model.user_id
             model.transaction_type = mapped_type

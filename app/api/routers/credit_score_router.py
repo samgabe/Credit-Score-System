@@ -3,7 +3,7 @@ Credit Score Router for the Credit Score API.
 Handles credit score calculation, retrieval, and history endpoints.
 """
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -14,11 +14,14 @@ from app.services.credit_score_service import CreditScoreService
 from app.services.score_calculator import CreditScoreCalculator
 from app.services.data_source_factory import DataSourceFactory
 from app.repositories.credit_score_repository import CreditScoreRepository
+from app.repositories.credit_subject_repository import CreditSubjectRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.repayment_repository import RepaymentRepository
 from app.repositories.mpesa_transaction_repository import MpesaTransactionRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.fine_repository import FineRepository
+from app.api.routers.system_auth_router import get_current_system_user, require_role
+from app.models.system_user import SystemUser
 
 router = APIRouter()
 
@@ -47,6 +50,7 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
     payment_repo = PaymentRepository(db)
     fine_repo = FineRepository(db)
     credit_score_repo = CreditScoreRepository(db)
+    credit_subject_repo = CreditSubjectRepository(db)
     
     # Initialize factor data aggregator using factory
     factor_aggregator = factory.create_factor_data_aggregator(
@@ -63,7 +67,8 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
     return CreditScoreService(
         factor_aggregator=factor_aggregator,
         calculator=calculator,
-        credit_score_repository=credit_score_repo
+        credit_score_repository=credit_score_repo,
+        credit_subject_repository=credit_subject_repo
     )
 
 
@@ -72,6 +77,8 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
     response_model=CreditScoreResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Insufficient permissions"},
         404: {"model": ErrorResponse, "description": "User not found"},
         500: {"model": ErrorResponse, "description": "Server error"}
     },
@@ -80,7 +87,8 @@ def get_credit_score_service(db: Session = Depends(get_db)) -> CreditScoreServic
 def calculate_credit_score(
     user_id: str,
     db: Session = Depends(get_db),
-    credit_score_service: CreditScoreService = Depends(get_credit_score_service)
+    credit_score_service: CreditScoreService = Depends(get_credit_score_service),
+    current_user: SystemUser = Depends(require_role("operator"))
 ):
     """
     Calculate credit score for a user.
@@ -391,4 +399,69 @@ def get_credit_score_history(
                 "timestamp": datetime.utcnow().isoformat(),
                 "details": {"error": str(e)}
             }
+        )
+
+
+@router.get(
+    "/credit-scores",
+    response_model=List[CreditScoreResponse],
+    responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Insufficient permissions"},
+        500: {"model": ErrorResponse, "description": "Server error"}
+    },
+    tags=["credit-scores"]
+)
+def get_all_credit_scores(
+    current_user: SystemUser = Depends(require_role("viewer")),
+    db: Session = Depends(get_db),
+    credit_score_service: CreditScoreService = Depends(get_credit_score_service)
+):
+    """
+    Get all credit scores for all subjects.
+    
+    Retrieves all credit scores in the system with subject information.
+    Requires viewer role or higher.
+    
+    Args:
+        current_user: Current authenticated system user
+        db: Database session (injected)
+        credit_score_service: Credit score service (injected)
+        
+    Returns:
+        List[CreditScoreResponse]: List of all credit scores with subject info
+    """
+    try:
+        # Get all credit scores with their subject information
+        credit_scores = credit_score_service.get_all_credit_scores_with_subjects()
+        
+        return [
+            CreditScoreResponse(
+                id=str(score.id),
+                user_id=str(score.credit_subject_id) if score.credit_subject_id else None,
+                score=score.score,
+                category=score.category,
+                repayment_factor=score.repayment_factor,
+                mpesa_factor=score.mpesa_factor,
+                consistency_factor=score.consistency_factor,
+                fine_factor=score.fine_factor,
+                calculated_at=score.calculated_at.isoformat(),
+                factors={
+                    "repayment_factor": score.repayment_factor,
+                    "mpesa_factor": score.mpesa_factor,
+                    "consistency_factor": score.consistency_factor,
+                    "fine_factor": score.fine_factor
+                },
+                credit_subject={
+                    "id": str(subject.id) if subject else None,
+                    "full_name": subject.full_name if subject else "Unknown",
+                    "email": subject.email if subject else ""
+                }
+            )
+            for score, subject in credit_scores
+        ]
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve credit scores: {str(e)}"
         )

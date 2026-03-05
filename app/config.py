@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     debug: bool = True
     
+    # JWT Configuration
+    secret_key: str = "your-secret-key-change-in-production"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440  # 24 hours
+    
     # Database Connection Pool Settings
     db_pool_size: int = 5
     db_max_overflow: int = 10

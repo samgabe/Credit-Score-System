@@ -86,14 +86,22 @@ async def health_check():
 
 # Import routers
 from app.api.routers.auth_router import router as auth_router
+from app.api.routers.system_auth_router import router as system_auth_router
+from app.api.routers.credit_subject_router import router as credit_subject_router
+from app.api.routers.credit_subject_score_router import router as credit_subject_score_router
 from app.api.routers.user_router import router as user_router
 from app.api.routers.credit_score_router import router as credit_score_router
 from app.api.routers.analytics_router import router as analytics_router
 from app.api.routers.csv_upload_router import router as csv_upload_router
+from app.api.routers.mpesa_statement_router import router as mpesa_statement_router
 
 # Register all routers with /api/v1 prefix
-app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
+app.include_router(system_auth_router, prefix="/api/v1", tags=["system-authentication"])
+app.include_router(credit_subject_router, prefix="/api/v1", tags=["credit-subjects"])
+app.include_router(credit_subject_score_router, prefix="/api/v1", tags=["credit-scores"])
+app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])  # Legacy - will be deprecated
 app.include_router(user_router, prefix="/api/v1", tags=["users"])
-app.include_router(credit_score_router, prefix="/api/v1", tags=["credit-scores"])
+app.include_router(credit_score_router, prefix="/api/v1", tags=["credit-scores"])  # Legacy - will be deprecated
 app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
+app.include_router(mpesa_statement_router, prefix="/api/v1", tags=["mpesa-statements"])
 app.include_router(csv_upload_router, prefix="/api/v1", tags=["csv-upload"])

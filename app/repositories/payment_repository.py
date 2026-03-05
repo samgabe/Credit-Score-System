@@ -105,3 +105,19 @@ class PaymentRepository:
             Payment.payment_date >= start_datetime,
             Payment.payment_date <= end_datetime
         ).order_by(desc(Payment.payment_date)).all()
+    
+    def get_by_credit_subject_id(self, credit_subject_id: str) -> List[Payment]:
+        """
+        Retrieve payments for a credit subject.
+        
+        Args:
+            credit_subject_id: ID of the credit subject
+            
+        Returns:
+            List[Payment]: List of payments for the credit subject
+        """
+        try:
+            uuid_id = UUID(credit_subject_id)
+            return self.db.query(Payment).filter(Payment.user_id == uuid_id).all()
+        except (ValueError, AttributeError):
+            return []
