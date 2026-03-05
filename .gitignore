@@ -3,45 +3,19 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# Virtual Environment
+# Virtual environments
 venv/
-ENV/
 env/
-\.venv/
-\.env/
+ENV/
+.venv/
 
-# Environment Variables
+# Environment variables
 .env
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.hypothesis/
 
 # Database
 *.db
@@ -49,6 +23,7 @@ htmlcov/
 
 # Logs
 *.log
+
 
 # OS
 .DS_Store
@@ -67,6 +42,11 @@ requirements.txt
 
 *.pdf 
 
+=======
+# Data
 csv_data/
-
 uploads/
+
+*.csv
+*.pdf
+*.backup_*
