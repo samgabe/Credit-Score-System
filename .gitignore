@@ -64,7 +64,8 @@ requirements.txt
 .md
 
 
-* .pdf
+
+*.pdf 
 
 csv_data/
 
