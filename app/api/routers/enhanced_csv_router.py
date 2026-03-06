@@ -1,6 +1,6 @@
 """
-Enhanced CSV Upload Router with Smart Processing
-Handles flexible CSV structures and ensures data integrity.
+CSV Upload Router for the Credit Score API.
+Handles intelligent CSV file processing with flexible column mapping and data validation.
 """
 
 import os
@@ -214,7 +214,7 @@ async def upload_csv_file(
         sync_stats = None
         if sync_to_db:
             try:
-                sync_stats = smart_sync_to_database(
+                sync_stats = sync_to_database(
                     csv_type=detected_type,
                     rows=result['parsed_rows'],
                     db=db
@@ -253,9 +253,9 @@ async def upload_csv_file(
         )
 
 
-def smart_sync_to_database(csv_type: str, rows: List[Dict], db: Session) -> Dict[str, int]:
+def sync_to_database(csv_type: str, rows: List[Dict], db: Session) -> Dict[str, int]:
     """
-    Smart database sync that handles various data structures and ensures integrity.
+    Database sync that handles various data structures and ensures integrity.
     """
     inserted = 0
     updated = 0

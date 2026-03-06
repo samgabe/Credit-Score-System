@@ -90,12 +90,12 @@ from app.api.routers.mpesa_statement_router import router as mpesa_statement_rou
 
 # Register all routers with /api/v1 prefix
 app.include_router(system_auth_router, prefix="/api/v1", tags=["system-authentication"])
-app.include_router(credit_subject_router, prefix="/api/v1", tags=["credit-subjects"])
+app.include_router(credit_subject_router, prefix="/api/v1/credit-subjects", tags=["credit-subjects"])  # Legacy - will be deprecated
 app.include_router(credit_subject_score_router, prefix="/api/v1", tags=["credit-scores"])
-app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])  # Legacy - will be deprecated
+app.include_router(auth_router, prefix="/api/v1/system-auth", tags=["authentication"])
+app.include_router(csv_upload_router, prefix="/api/v1/csv", tags=["csv-upload"])  # Updated from smart-csv to csv
+app.include_router(enhanced_csv_router, prefix="/api/v1/csv", tags=["csv-upload"])  # Updated from smart-csv to csv
 app.include_router(user_router, prefix="/api/v1", tags=["users"])
 app.include_router(credit_score_router, prefix="/api/v1", tags=["credit-scores"])  # Legacy - will be deprecated
 app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 app.include_router(mpesa_statement_router, prefix="/api/v1", tags=["mpesa-statements"])
-app.include_router(enhanced_csv_router, prefix="/api/v1/smart-csv", tags=["smart-csv"])  # New smart CSV
-app.include_router(csv_upload_router, prefix="/api/v1/csv-upload", tags=["csv-upload"])  # Legacy - will be deprecated
