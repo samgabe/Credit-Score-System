@@ -116,6 +116,20 @@ class RepaymentRepository:
         """
         try:
             uuid_id = UUID(credit_subject_id)
-            return self.db.query(Repayment).filter(Repayment.user_id == uuid_id).all()
+            return self.db.query(Repayment).filter(Repayment.credit_subject_id == uuid_id).all()
         except (ValueError, AttributeError):
             return []
+    
+    def get_by_credit_subject(self, credit_subject_id: UUID) -> List[Repayment]:
+        """
+        Retrieve repayments for a credit subject by UUID.
+        
+        Updated to use credit_subject_id instead of user_id.
+        
+        Args:
+            credit_subject_id: UUID of the credit subject
+            
+        Returns:
+            List[Repayment]: List of repayments for the credit subject
+        """
+        return self.db.query(Repayment).filter(Repayment.credit_subject_id == credit_subject_id).all()

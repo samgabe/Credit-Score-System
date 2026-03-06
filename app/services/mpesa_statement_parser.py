@@ -250,7 +250,6 @@ class MpesaStatementParser:
             
             return 0.0
         except Exception as e:
-            print(f"Error extracting amount: {e}")
             return 0.0
     
     def _parse_transaction(self, receipt_no: str, time_str: str, details: str) -> Optional[MpesaTransaction]:

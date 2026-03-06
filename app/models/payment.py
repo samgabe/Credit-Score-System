@@ -1,6 +1,6 @@
 """
 Payment model for the Credit Score API.
-Tracks comprehensive payment history for users.
+Tracks comprehensive payment history for clients.
 """
 import uuid
 from datetime import datetime
@@ -29,9 +29,11 @@ class Payment(Base):
     """
     Payment model representing all payment transactions.
     
+    Updated to properly align with clients (credit subjects) instead of system users.
+    
     Attributes:
         id: Unique identifier (UUID)
-        user_id: Foreign key to User
+        credit_subject_id: Foreign key to CreditSubject (client)
         amount: Payment amount
         payment_type: Type of payment (repayment, fine, other)
         status: Payment status (completed, pending, failed)
@@ -41,15 +43,19 @@ class Payment(Base):
     __tablename__ = "payments"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     amount = Column(Numeric(10, 2), nullable=False)
     payment_type = Column(Enum(PaymentType), nullable=False)
     status = Column(Enum(PaymentStatus), nullable=False)
     payment_date = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
+    # Legacy user_id for migration (nullable)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    
     # Relationships
-    user = relationship("User", back_populates="payments")
+    # credit_subject = relationship("CreditSubject", back_populates="payments")
+    # user = relationship("User", back_populates="payments")  # Legacy
     
     def __repr__(self):
-        return f"<Payment(id={self.id}, user_id={self.user_id}, amount={self.amount}, type={self.payment_type.value}, status={self.status.value})>"
+        return f"<Payment(id={self.id}, credit_subject_id={self.credit_subject_id}, amount={self.amount}, type={self.payment_type.value}, status={self.status.value})>"

@@ -193,7 +193,6 @@ class AuthService:
         """
         try:
             user = self.authenticate_user(login_data.email, login_data.password)
-            print(f"Authenticated user: {user.fullname if user else 'None'}")
             
             # Create token data
             token_data = TokenData(
@@ -220,12 +219,9 @@ class AuthService:
                 }
             }
             
-            print(f"Complete login response: {response}")  # Debug logging
-            print(f"User object keys: {list(response.keys())}")  # Debug logging
             return response
             
         except AuthenticationException as e:
-            print(f"Authentication failed: {str(e)}")  # Debug logging
             raise e
     
     def change_password(self, user_id: UUID, new_password: str) -> None:

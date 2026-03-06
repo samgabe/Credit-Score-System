@@ -14,12 +14,12 @@ class MpesaTransaction(Base):
     """
     M-Pesa Transaction model representing mobile money transactions.
     
-    Updated to support individual client statement analysis.
+    Updated to properly align with clients (credit subjects) as primary relationship.
     
     Attributes:
         id: Unique identifier (UUID)
+        credit_subject_id: Foreign key to CreditSubject (client) - PRIMARY
         user_id: Foreign key to User (legacy, kept for compatibility)
-        credit_subject_id: Foreign key to CreditSubject (new, for individual analysis)
         statement_id: Foreign key to M-Pesa Statement (new)
         transaction_type: Type of transaction (incoming or outgoing)
         amount: Transaction amount
@@ -37,11 +37,11 @@ class MpesaTransaction(Base):
     __tablename__ = "mpesa_transactions"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
-    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id"), nullable=True, index=True)
+    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id"), nullable=False, index=True)
     statement_id = Column(UUID(as_uuid=True), ForeignKey("mpesa_statements.id"), nullable=True, index=True)
     
     # Legacy fields (kept for compatibility)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     transaction_type = Column(String(50), nullable=True)
     reference = Column(String(100), nullable=True)
     transaction_date = Column(DateTime, nullable=True)
@@ -59,10 +59,10 @@ class MpesaTransaction(Base):
     amount = Column(Numeric(10, 2), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
-    # Relationships - simplified for now
-    # user = relationship("User", back_populates="mpesa_transactions")
-    # credit_subject = relationship("CreditSubject", backref="mpesa_transactions")
-    # statement relationship will be added later
+    # Relationships
+    # credit_subject = relationship("CreditSubject", back_populates="mpesa_transactions")
+    # statement = relationship("MpesaStatement", back_populates="transactions")
+    # user = relationship("User", back_populates="mpesa_transactions")  # Legacy
     
     def __repr__(self):
         return f"<MpesaTransaction(id={self.id}, credit_subject_id={self.credit_subject_id}, amount={self.amount})>"

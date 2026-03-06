@@ -61,7 +61,9 @@ class FactorDataAggregator:
 
     def get_repayment_data(self, user_id: UUID) -> RepaymentData:
         """
-        Retrieve and aggregate repayment history data for a user.
+        Retrieve and aggregate repayment history data for a credit subject.
+        
+        Updated to work with credit subjects instead of system users.
         
         Calculates metrics including total payments, on-time payments,
         late payments, defaulted payments, and on-time rate.
@@ -70,7 +72,7 @@ class FactorDataAggregator:
         structures with zero values.
         
         Args:
-            user_id: UUID of the user
+            user_id: UUID of the credit subject (keeping parameter name for compatibility)
             
         Returns:
             RepaymentData: Aggregated repayment metrics
@@ -78,9 +80,14 @@ class FactorDataAggregator:
         Requirements: 2.1, 2.5
         """
         try:
-            repayments = self.repayment_repository.get_by_user(user_id)
+            # Try to get repayments by credit_subject_id first (new approach)
+            repayments = self.repayment_repository.get_by_credit_subject(user_id)
             
-            # Handle case where user has no repayments
+            # Fallback to user_id for legacy data
+            if not repayments:
+                repayments = self.repayment_repository.get_by_user(user_id)
+            
+            # Handle case where subject has no repayments
             if not repayments:
                 return RepaymentData(
                     total_payments=0,
@@ -110,7 +117,6 @@ class FactorDataAggregator:
         except Exception as e:
             # Log error and return empty structure
             # In production, use proper logging
-            print(f"Error retrieving repayment data for user {user_id}: {e}")
             return RepaymentData(
                 total_payments=0,
                 on_time_payments=0,
@@ -176,7 +182,6 @@ class FactorDataAggregator:
             )
         except Exception as e:
             # Log error and return empty structure
-            print(f"Error retrieving M-Pesa data for user {user_id}: {e}")
             return MpesaData(
                 transaction_count=0,
                 total_volume=0.0,
@@ -267,7 +272,6 @@ class FactorDataAggregator:
             )
         except Exception as e:
             # Log error and return empty structure
-            print(f"Error retrieving payment consistency data for user {user_id}: {e}")
             return ConsistencyData(
                 payment_count=0,
                 average_gap_days=0.0,
@@ -322,7 +326,6 @@ class FactorDataAggregator:
             )
         except Exception as e:
             # Log error and return empty structure
-            print(f"Error retrieving fine data for user {user_id}: {e}")
             return FineData(
                 total_fines=0,
                 unpaid_fines=0,

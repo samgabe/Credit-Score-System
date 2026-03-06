@@ -77,7 +77,6 @@ class CSVDataLoader:
                 reader = csv.DictReader(csvfile)
                 return list(reader)
         except Exception as e:
-            print(f"Error loading CSV file {filename}: {e}")
             return []
     
     def _parse_uuid(self, uuid_str: str) -> UUID:
@@ -165,7 +164,6 @@ class CSVDataLoader:
                 on_time_rate=on_time_rate
             )
         except Exception as e:
-            print(f"Error retrieving repayment data for user {user_id}: {e}")
             return RepaymentData(
                 total_payments=0,
                 on_time_payments=0,
@@ -234,7 +232,6 @@ class CSVDataLoader:
                 frequency_days=frequency_days
             )
         except Exception as e:
-            print(f"Error retrieving M-Pesa data for user {user_id}: {e}")
             return MpesaData(
                 transaction_count=0,
                 total_volume=0.0,
@@ -326,7 +323,6 @@ class CSVDataLoader:
                 regularity_score=regularity_score
             )
         except Exception as e:
-            print(f"Error retrieving payment consistency data for user {user_id}: {e}")
             return ConsistencyData(
                 payment_count=0,
                 average_gap_days=0.0,
@@ -382,7 +378,6 @@ class CSVDataLoader:
                 unpaid_rate=unpaid_rate
             )
         except Exception as e:
-            print(f"Error retrieving fine data for user {user_id}: {e}")
             return FineData(
                 total_fines=0,
                 unpaid_fines=0,

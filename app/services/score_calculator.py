@@ -123,7 +123,8 @@ class CreditScoreCalculator:
         - On-time payment rate: 70% of factor weight (208.25 points max)
         - Default rate penalty: 30% of factor weight (89.25 points max)
         
-        The on-time rate contributes positively, while defaults reduce the score.
+        For users with no credit history, provide a neutral baseline score
+        rather than zero, as absence of negative history shouldn't be penalizing.
         
         Args:
             data: Aggregated repayment history data
@@ -135,18 +136,20 @@ class CreditScoreCalculator:
         """
         max_factor_score = self.MAX_SCORE * self.REPAYMENT_WEIGHT  # 297.5
         
-        # Handle case with no repayments (no data = no contribution)
+        # Handle case with no repayments - give neutral baseline score
+        # rather than zero, as no history is better than bad history
         if data.total_payments == 0:
-            return 0.0
+            # Give 50% of maximum possible points as neutral baseline
+            return max_factor_score * 0.5
         
-        # On-time payment rate contributes 70% of the factor weight
+        # On-time payment rate contributes 70% of factor weight
         on_time_contribution = data.on_time_rate * max_factor_score * 0.70
         
         # Default rate penalty (30% of factor weight)
         # Calculate default rate
         default_rate = data.defaulted_payments / data.total_payments if data.total_payments > 0 else 0.0
         
-        # Penalty reduces the remaining 30% based on default rate
+        # Penalty reduces remaining 30% based on default rate
         # If no defaults, get full 30%; if all defaults, get 0%
         default_contribution = (1.0 - default_rate) * max_factor_score * 0.30
         
@@ -176,9 +179,11 @@ class CreditScoreCalculator:
         """
         max_factor_score = self.MAX_SCORE * self.MPESA_WEIGHT  # 170
         
-        # Handle case with no transactions
+        # Handle case with no transactions - give neutral baseline score
         if data.transaction_count == 0:
-            return 0.0
+            # Give 40% of maximum possible points as neutral baseline
+            # M-Pesa activity is less critical than repayment history
+            return max_factor_score * 0.4
         
         # Transaction frequency contributes 50% of factor weight
         # Normalize frequency: assume 30 transactions per month is excellent
@@ -228,9 +233,11 @@ class CreditScoreCalculator:
         """
         max_factor_score = self.MAX_SCORE * self.CONSISTENCY_WEIGHT  # 212.5
         
-        # Handle case with no payments
+        # Handle case with no payments - give neutral baseline score
         if data.payment_count == 0:
-            return 0.0
+            # Give 45% of maximum possible points as neutral baseline
+            # Payment consistency is important but absence isn't penalizing
+            return max_factor_score * 0.45
         
         # Payment regularity contributes 60% of factor weight
         # regularity_score is already 0-1 from the aggregator

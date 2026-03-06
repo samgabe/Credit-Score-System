@@ -22,10 +22,12 @@ class CreditScore(Base):
     """
     Credit Score model representing calculated creditworthiness scores.
     
+    Updated to properly align with clients (credit subjects) as primary relationship.
+    
     Attributes:
         id: Unique identifier (UUID)
+        credit_subject_id: Foreign key to CreditSubject (client) - PRIMARY
         user_id: Foreign key to User (legacy, for migration)
-        credit_subject_id: Foreign key to CreditSubject (new primary relationship)
         score: Credit score value (0-850)
         category: Score category (Poor, Fair, Good, Excellent)
         repayment_factor: Contribution from repayment history (35% weight)
@@ -37,8 +39,8 @@ class CreditScore(Base):
     __tablename__ = "credit_scores"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)  # Legacy, nullable for migration
-    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id", ondelete="CASCADE"), nullable=True, index=True)  # New relationship
     score = Column(Integer, nullable=False)
     category = Column(String(20), nullable=False)
     repayment_factor = Column(Float, nullable=False)
@@ -48,20 +50,17 @@ class CreditScore(Base):
     calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
-    user = relationship("User", back_populates="credit_scores")
-    
-    # CreditSubject relationship will be set after model is defined
-    # to avoid circular import issues
+    # credit_subject = relationship("CreditSubject", back_populates="credit_scores")
+    # user = relationship("User", back_populates="credit_scores")  # Legacy
     
     # Composite index for efficient queries
     __table_args__ = (
-        Index('ix_credit_scores_user_calculated', 'user_id', 'calculated_at'),
         Index('ix_credit_scores_subject_calculated', 'credit_subject_id', 'calculated_at'),
+        Index('ix_credit_scores_user_calculated', 'user_id', 'calculated_at'),  # Legacy
     )
     
     def __repr__(self):
-        subject_info = f"subject_id={self.credit_subject_id}" if self.credit_subject_id else f"user_id={self.user_id}"
-        return f"<CreditScore(id={self.id}, {subject_info}, score={self.score}, category={self.category})>"
+        return f"<CreditScore(id={self.id}, credit_subject_id={self.credit_subject_id}, score={self.score}, category={self.category})>"
 
 
 # Set up the CreditSubject relationship after both models are defined

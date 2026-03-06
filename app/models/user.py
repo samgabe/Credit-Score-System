@@ -1,18 +1,19 @@
 """
 User model for the Credit Score API.
-Represents individual users whose credit scores are being tracked.
+Represents system users who operate the application.
 """
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from app.database import Base
 
 
 class User(Base):
     """
-    User model representing an individual in the credit score system.
+    User model representing a system user in the credit score application.
+    
+    Updated to represent system operators, not credit subjects.
     
     Attributes:
         id: Unique identifier (UUID)
@@ -35,12 +36,12 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationships
-    repayments = relationship("Repayment", back_populates="user", cascade="all, delete-orphan")
+    # Legacy relationships - commented out since financial data now uses credit_subjects
+    # repayments = relationship("Repayment", back_populates="user", cascade="all, delete-orphan")
     # mpesa_transactions = relationship("MpesaTransaction", back_populates="user", cascade="all, delete-orphan")
-    fines = relationship("Fine", back_populates="user", cascade="all, delete-orphan")
-    credit_scores = relationship("CreditScore", back_populates="user", cascade="all, delete-orphan")
-    payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
+    # fines = relationship("Fine", back_populates="user", cascade="all, delete-orphan")
+    # credit_scores = relationship("CreditScore", back_populates="user", cascade="all, delete-orphan")
+    # payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, national_id={self.national_id}, fullname={self.fullname})>"

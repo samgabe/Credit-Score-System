@@ -17,7 +17,7 @@ engine = create_engine(
     max_overflow=settings.db_max_overflow,
     pool_timeout=settings.db_pool_timeout,
     pool_recycle=settings.db_pool_recycle,
-    echo=settings.debug,  # Log SQL queries in debug mode
+    echo=False,  # Disable SQL query logging
 )
 
 # Create session factory

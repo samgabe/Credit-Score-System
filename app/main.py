@@ -26,12 +26,8 @@ settings = get_settings()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO if not settings.debug else logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('app.log')
-    ]
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -67,11 +63,7 @@ app.add_exception_handler(Exception, general_exception_handler)
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on application startup."""
-    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    logger.info("Initializing database connection...")
     init_db()
-    logger.info("Database initialized successfully")
-    logger.info(f"Application ready - Debug mode: {settings.debug}")
 
 
 @app.get("/health")
@@ -93,6 +85,7 @@ from app.api.routers.user_router import router as user_router
 from app.api.routers.credit_score_router import router as credit_score_router
 from app.api.routers.analytics_router import router as analytics_router
 from app.api.routers.csv_upload_router import router as csv_upload_router
+from app.api.routers.enhanced_csv_router import router as enhanced_csv_router
 from app.api.routers.mpesa_statement_router import router as mpesa_statement_router
 
 # Register all routers with /api/v1 prefix
@@ -104,4 +97,5 @@ app.include_router(user_router, prefix="/api/v1", tags=["users"])
 app.include_router(credit_score_router, prefix="/api/v1", tags=["credit-scores"])  # Legacy - will be deprecated
 app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 app.include_router(mpesa_statement_router, prefix="/api/v1", tags=["mpesa-statements"])
-app.include_router(csv_upload_router, prefix="/api/v1", tags=["csv-upload"])
+app.include_router(enhanced_csv_router, prefix="/api/v1/smart-csv", tags=["smart-csv"])  # New smart CSV
+app.include_router(csv_upload_router, prefix="/api/v1/csv-upload", tags=["csv-upload"])  # Legacy - will be deprecated

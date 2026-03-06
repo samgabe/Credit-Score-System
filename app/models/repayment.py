@@ -1,6 +1,6 @@
 """
 Repayment model for the Credit Score API.
-Tracks loan repayments made by users.
+Tracks loan repayments made by clients.
 """
 import uuid
 from datetime import datetime, date
@@ -21,9 +21,11 @@ class Repayment(Base):
     """
     Repayment model representing a loan repayment transaction.
     
+    Updated to properly align with clients (credit subjects) instead of system users.
+    
     Attributes:
         id: Unique identifier (UUID)
-        user_id: Foreign key to User
+        credit_subject_id: Foreign key to CreditSubject (client)
         amount: Repayment amount
         loan_reference: Reference number for the loan
         due_date: Date when payment was due
@@ -35,7 +37,7 @@ class Repayment(Base):
     __tablename__ = "repayments"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     amount = Column(Numeric(10, 2), nullable=False)
     loan_reference = Column(String(100), nullable=False)
     due_date = Column(Date, nullable=False)
@@ -45,7 +47,7 @@ class Repayment(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
     # Relationships
-    user = relationship("User", back_populates="repayments")
+    # credit_subject = relationship("CreditSubject", back_populates="repayments")
     
     def __repr__(self):
-        return f"<Repayment(id={self.id}, user_id={self.user_id}, amount={self.amount}, status={self.status.value})>"
+        return f"<Repayment(id={self.id}, credit_subject_id={self.credit_subject_id}, amount={self.amount}, status={self.status.value})>"

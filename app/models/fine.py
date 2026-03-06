@@ -1,6 +1,6 @@
 """
 Fine model for the Credit Score API.
-Tracks penalty charges assessed against users.
+Tracks penalty charges assessed against clients.
 """
 import uuid
 from datetime import datetime, date
@@ -21,9 +21,11 @@ class Fine(Base):
     """
     Fine model representing penalty charges.
     
+    Updated to properly align with clients (credit subjects) instead of system users.
+    
     Attributes:
         id: Unique identifier (UUID)
-        user_id: Foreign key to User
+        credit_subject_id: Foreign key to CreditSubject (client)
         amount: Fine amount
         reason: Reason for the fine
         status: Payment status (unpaid or paid)
@@ -34,7 +36,7 @@ class Fine(Base):
     __tablename__ = "fines"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    credit_subject_id = Column(UUID(as_uuid=True), ForeignKey("credit_subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     amount = Column(Numeric(10, 2), nullable=False)
     reason = Column(String(500), nullable=False)
     status = Column(Enum(FineStatus), nullable=False, default=FineStatus.unpaid)
@@ -42,8 +44,12 @@ class Fine(Base):
     paid_date = Column(Date, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
+    # Legacy user_id for migration (nullable)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    
     # Relationships
-    user = relationship("User", back_populates="fines")
+    # credit_subject = relationship("CreditSubject", back_populates="fines")
+    # user = relationship("User", back_populates="fines")  # Legacy
     
     def __repr__(self):
-        return f"<Fine(id={self.id}, user_id={self.user_id}, amount={self.amount}, status={self.status.value})>"
+        return f"<Fine(id={self.id}, credit_subject_id={self.credit_subject_id}, amount={self.amount}, status={self.status.value})>"

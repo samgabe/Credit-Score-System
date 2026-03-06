@@ -107,25 +107,11 @@ def calculate_credit_score(
     """
     try:
         # Parse and validate UUID
-        print(f"Received user_id: '{user_id}'")  # Debug logging
-        print(f"User_id type: {type(user_id)}")  # Debug logging
-        print(f"User_id length: {len(user_id) if user_id else 'None'}")  # Debug logging
-        print(f"User_id repr: {repr(user_id)}")  # Debug logging
-        
-        # Check for common issues
-        if not user_id:
-            raise ValueError("User ID is empty")
-        
-        # Remove any potential whitespace or special characters
-        clean_user_id = str(user_id).strip()
-        print(f"Clean user_id: '{clean_user_id}'")  # Debug logging
+        user_id = str(user_id).strip()
         
         try:
-            user_uuid = UUID(clean_user_id)
-            print(f"Successfully parsed UUID: {user_uuid}")  # Debug logging
+            user_uuid = UUID(user_id)
         except ValueError as e:
-            print(f"UUID parsing error: {e}")  # Debug logging
-            print(f"Error details - user_id: {repr(clean_user_id)}")  # Debug logging
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
@@ -133,8 +119,8 @@ def calculate_credit_score(
                     "message": "Invalid request data",
                     "timestamp": datetime.utcnow().isoformat(),
                     "details": {
-                        "user_id": f"Invalid UUID format received: '{clean_user_id}'. Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-                        "received": clean_user_id,
+                        "user_id": f"Invalid UUID format received: '{user_id}'. Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                        "received": user_id,
                         "error": str(e)
                     }
                 }
@@ -197,7 +183,6 @@ def calculate_credit_score(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Unexpected error in calculate_credit_score: {e}")  # Debug logging
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

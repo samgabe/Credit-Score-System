@@ -115,6 +115,66 @@ def create_user(
 
 
 @router.get(
+    "/users/new",
+    response_model=dict,
+    responses={
+        200: {"description": "User creation form data"},
+        500: {"model": ErrorResponse, "description": "Server error"}
+    },
+    tags=["users"]
+)
+def get_new_user_form():
+    """
+    Get user creation form data.
+    
+    Returns metadata for creating a new user, such as field requirements
+    and validation rules. This endpoint is typically used by frontend
+    applications to render user creation forms.
+    
+    Returns:
+        dict: Form metadata and field requirements
+        
+    Validates: Requirement 6.1 - User creation interface support
+    """
+    return {
+        "title": "Create New User",
+        "fields": {
+            "fullname": {
+                "type": "string",
+                "required": True,
+                "min_length": 2,
+                "max_length": 100,
+                "label": "Full Name"
+            },
+            "national_id": {
+                "type": "integer",
+                "required": True,
+                "min_length": 6,
+                "max_length": 20,
+                "label": "National ID"
+            },
+            "phone_number": {
+                "type": "string",
+                "required": True,
+                "min_length": 10,
+                "max_length": 20,
+                "label": "Phone Number"
+            },
+            "email": {
+                "type": "string",
+                "required": False,
+                "format": "email",
+                "max_length": 100,
+                "label": "Email Address"
+            }
+        },
+        "validation_rules": {
+            "national_id_unique": "National ID must be unique across all users"
+        }
+    }
+
+
+@router.get(
     "/users/{user_id}",
     response_model=UserResponse,
     responses={
